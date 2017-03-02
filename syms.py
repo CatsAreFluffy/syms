@@ -1,25 +1,32 @@
-#SYMbolSctak 1.2
+#SYMbolSctak 1.3 (welcome to TIO edition)
 from __future__ import print_function #required for compatibility with python 2.x
-#parse=input("Program:");
-parse='''
-1;2:" 2;~[[:={2:~(~}~?[["=={2:~[{{"}~}~?![{{'}~}~?]~}~?[2:=!{[:{;}~+~}~?]~{~[[:={2:~(~}~?[["=={2:~[{{"}~}~?![{{'}~}~?]~}~?[2:=!{[:{;}~+~}~?]+}~:{;}~+~+)2;~-[0;=!{{~[[:={2:~(~}~?[["=={2:~[{{"}~}~?![{{'}~}~?]~}~?[2:=!{[:{;}~+~}~?]+}~:{;}~+~+)1;~-[0;=!}{[(+~[(~++~?}[(+~[(~++~?]~{)}~[[:={2:~(~}~?[["=={2:~[{{"}~}~?![{{'}~}~?]~}~?[2:=!{[:{;}~+~}~?]~+)
-'''.strip("\n") #this is your syms program
+from sys import argv
+#parse=input("Program:"); #read prog from stdin, single line
+cmdoptions="".join([i[1:] for i in argv if i[0]=="-"]) #i'd do this better, but i'm lazy
+if "h" in cmdoptions:
+    print("Usage: python syms.py (-h|file.syms -ridc)\n-h: Prints this help message.\n-d: Prints debug output.\n-c: Colors debug output. (Not recommended on TIO.)\n-i: Dumps stack at end of execution.\n-r: Reverses inputs to {+-*/@}.")
+    exit(0)
+parse=open(argv[1]).read()
+options={"reverse-math":False,"debug-messages":False,"color-debug":False,"full-debug":False,"implicit-output":False,"fixed-print":False,"fixed-equals":True} #for the record, fixedprint is a leftover from when this language was called Sctak and used actual words
+if "d" in cmdoptions:
+    options["debug-messages"]=True
+    if "c" in cmdoptions:
+        options["color-debug"]=True
+if "i" in cmdoptions:
+    options["implicit-output"]=True
+if "r" in cmdoptions:
+    options["reverse-math"]=True
 tokens=list(parse)
 extensions=[]
 try:
     eval('print "m"')
     v=2
 except SyntaxError:v=3
-try:
-    import extension1
-    extensions.append("extension1")
-except ImportError:pass
 stack=[]
 parsemode=0 #0 for normal, 1 for string ##unused
 parselevel=0 # # of nested {}s
 temp=""
 pvars=dict()
-options={"reverse-math":False,"debug-messages":False,"full-debug":False,"implicit-output":True,"fixed-print":False}
 try:
     unicode("")
 except NameError:
@@ -46,11 +53,17 @@ def reverseif():
         stack.append(a);stack.append(b)
 while len(tokens)>0:
     try:
-        if options["debug-messages"] and (options["full-debug"] or parselevel==0): 
-            print("Cycle");print("".join(tokens));print(stack)
-            if options["full-debug"]: 
-                print(temp);print(parselevel+parsemode)
-            print("Program") #debug code
+        if options["debug-messages"] and (options["full-debug"] or parselevel==0):
+            if options["color-debug"]:
+                print("\033[31m",end="");print("Program: "+"".join(tokens));print("Stack: "+str(stack))
+                if options["full-debug"]: 
+                    print("Temporary: "+temp);print("String nest: "+str(parselevel+parsemode))
+                print("Iteration...\033[30;0m") #colorized debug code (if random junk appears, do not use)
+            else:
+                print("Cycle");print("Program: "+"".join(tokens));print("Stack: "+str(stack))
+                if options["full-debug"]: 
+                    print("Temporary: "+temp);print("String nest: "+str(parselevel+parsemode))
+                print("Program") #debug code
         current=tokens.pop(0)
 #       if current=='"' and False:
 #           if parsemode==1:
@@ -119,7 +132,11 @@ while len(tokens)>0:
                 temp=""
         #boolean operations
         if current=="=":
-            stack.append(stack.pop()==stack.pop())
+            if options["fixed-equals"]:
+                a,b=stack.pop(),stack.pop()
+                stack.append(type(a)==type(b) and a==b)
+            else:
+                stack.append(stack.pop()==stack.pop())
         if current=="!":
             stack.append(not stack.pop())
         #string operations
