@@ -1,13 +1,27 @@
-#SYMbolSctak 1.3 (welcome to TIO edition)
+#SYMbolSctak 1.3.1
 from __future__ import print_function #required for compatibility with python 2.x
 from sys import argv
 #parse=input("Program:"); #read prog from stdin, single line
-cmdoptions="".join([i[1:] for i in argv if i[0]=="-"]) #i'd do this better, but i'm lazy
-if "h" in cmdoptions:
+try:
+    unicode
+    realinput=raw_input
+    v=2
+except:
+    unicode=lambda x:x
+    realinput=input
+    v=3
+if len(argv)==1:
+    argv+=realinput("Args: ").split(" ")
+cmdoptions="".join([i[1:] for i in argv if len(i)>0 and i[0]=="-"]) #i'd do this better, but i'm lazy
+if "h" in cmdoptions or argv[1]=="":
     print("Usage: python syms.py (-h|file.syms -ridc)\n-h: Prints this help message.\n-d: Prints debug output.\n-c: Colors debug output. (Not recommended on TIO.)\n-i: Dumps stack at end of execution.\n-r: Reverses inputs to {+-*/@}.")
-    exit(0)
-parse=open(argv[1]).read()
-options={"reverse-math":False,"debug-messages":False,"color-debug":False,"full-debug":False,"implicit-output":False,"fixed-print":False,"fixed-equals":True} #for the record, fixedprint is a leftover from when this language was called Sctak and used actual words
+    if idle==0:
+        exit(0)
+    else:
+        "Idle does not like exit()"/0
+with open(argv[1]) as w:
+    parse=w.read()
+options={"reverse-math":False,"debug-messages":False,"color-debug":False,"full-debug":False,"implicit-output":False,"fixed-equals":True}
 if "d" in cmdoptions:
     options["debug-messages"]=True
     if "c" in cmdoptions:
@@ -18,10 +32,6 @@ if "r" in cmdoptions:
     options["reverse-math"]=True
 tokens=list(parse)
 extensions=[]
-try:
-    eval('print "m"')
-    v=2
-except SyntaxError:v=3
 stack=[]
 parsemode=0 #0 for normal, 1 for string ##unused
 parselevel=0 # # of nested {}s
@@ -33,15 +43,9 @@ except NameError:
     def unicode(x):return x #more compatitbility stuff
 def modprint(x):
     x=str(x)
-    if options["fixed-print"]:
-        if len(x)>0 and x[0]==" ":
-            x=x[1:]
     print(x)
 def modinput(x):
     x=str(x)
-    if options["fixed-print"]:
-        if len(x)>0 and x[0]==" ":
-            x=x[1:]
     try:
         return raw_input(x)
     except NameError:
@@ -55,10 +59,10 @@ while len(tokens)>0:
     try:
         if options["debug-messages"] and (options["full-debug"] or parselevel==0):
             if options["color-debug"]:
-                print("\033[31m",end="");print("Program: "+"".join(tokens));print("Stack: "+str(stack))
+                print("\033[31m",end="");print("Program: "+"".join(tokens));print("\033[35m",end="");print("Stack: "+str(stack))
                 if options["full-debug"]: 
-                    print("Temporary: "+temp);print("String nest: "+str(parselevel+parsemode))
-                print("Iteration...\033[30;0m") #colorized debug code (if random junk appears, do not use)
+                    print("\033[33mTemporary: "+temp);print("String nest: "+str(parselevel+parsemode))
+                print("\033[34mIteration...\033[30;0m") #colorized debug code (if random junk appears, do not use)
             else:
                 print("Cycle");print("Program: "+"".join(tokens));print("Stack: "+str(stack))
                 if options["full-debug"]: 
