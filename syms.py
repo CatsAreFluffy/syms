@@ -1,4 +1,4 @@
-#SYMbolSctak 1.3.1
+#SYMbolSctak 1.4
 from __future__ import print_function #required for compatibility with python 2.x
 from sys import argv
 #parse=input("Program:"); #read prog from stdin, single line
@@ -14,7 +14,7 @@ if len(argv)==1:
     argv+=realinput("Args: ").split(" ")
 cmdoptions="".join([i[1:] for i in argv if len(i)>0 and i[0]=="-"]) #i'd do this better, but i'm lazy
 if "h" in cmdoptions or argv[1]=="":
-    print("Usage: python syms.py (-h|file.syms -ridc)\n-h: Prints this help message.\n-d: Prints debug output.\n-c: Colors debug output. (Not recommended on TIO.)\n-i: Dumps stack at end of execution.\n-r: Reverses inputs to {+-*/@}.")
+    print("Usage: python syms.py (-h|file.syms -ridcf)\n-h: Prints this help message.\n-d: Prints debug output.\n-c: Colors debug output. (Not recommended on TIO.)\n-f: Prints more debug info. (You probably don't need this.)\n-i: Dumps stack at end of execution.\n-r: Reverses inputs to {+-*/@}.")
     if idle==0:
         exit(0)
     else:
@@ -26,6 +26,8 @@ if "d" in cmdoptions:
     options["debug-messages"]=True
     if "c" in cmdoptions:
         options["color-debug"]=True
+    if "f" in cmdoptions:
+        options["full-debug"]=True
 if "i" in cmdoptions:
     options["implicit-output"]=True
 if "r" in cmdoptions:
@@ -33,7 +35,7 @@ if "r" in cmdoptions:
 tokens=list(parse)
 extensions=[]
 stack=[]
-parsemode=0 #0 for normal, 1 for string ##unused
+parsemode=0 #0 for normal, 1 for number
 parselevel=0 # # of nested {}s
 temp=""
 pvars=dict()
@@ -57,16 +59,16 @@ def reverseif():
         stack.append(a);stack.append(b)
 while len(tokens)>0:
     try:
-        if options["debug-messages"] and (options["full-debug"] or parselevel==0):
+        if options["debug-messages"] and (options["full-debug"] or parselevel+parsemode==0):
             if options["color-debug"]:
                 print("\033[31m",end="");print("Program: "+"".join(tokens));print("\033[35m",end="");print("Stack: "+str(stack))
                 if options["full-debug"]: 
-                    print("\033[33mTemporary: "+temp);print("String nest: "+str(parselevel+parsemode))
+                    print("\033[33mTemporary: "+temp);print("String nest: "+str(parselevel));print("Number mode: "+str(parsemode))
                 print("\033[34mIteration...\033[30;0m") #colorized debug code (if random junk appears, do not use)
             else:
                 print("Cycle");print("Program: "+"".join(tokens));print("Stack: "+str(stack))
                 if options["full-debug"]: 
-                    print("Temporary: "+temp);print("String nest: "+str(parselevel+parsemode))
+                    print("Temporary: "+temp);print("String nest: "+str(parselevel));print("Number mode: "+str(parsemode))
                 print("Program") #debug code
         current=tokens.pop(0)
 #       if current=='"' and False:
@@ -94,13 +96,25 @@ while len(tokens)>0:
         if current=='\\': #add next
             temp+=tokens.pop(0)
             continue
-        if parsemode==1 or parselevel>0: #in a string, nothing special
+        if current=='&': #insert from stack
+            temp+=str(stack.pop())
+            continue
+        if parselevel>0: #in a string, nothing special
             temp+=current
             continue
+        if current=="$": #one char string
+            stack.append(tokens.pop(0))
         #we are not in a string/function
         #???? a number
         if unicode(current).isnumeric():
+            parsemode=1
             temp+=str(current)
+            continue
+        if parsemode==1:
+            parsemode=0
+            stack.append(int(temp))
+            temp=""
+            tokens=[current]+tokens
             continue
         #booleans
         if current=="\"":
@@ -143,6 +157,14 @@ while len(tokens)>0:
                 stack.append(stack.pop()==stack.pop())
         if current=="!":
             stack.append(not stack.pop())
+        if current=="|":
+            a=stack.pop()
+            b=stack.pop()
+            stack.append(a or b);
+        if current=="&":
+            a=stack.pop()
+            b=stack.pop()
+            stack.append(a and b);
         #string operations
         #add
         if current=="@":
@@ -170,8 +192,8 @@ while len(tokens)>0:
                 tokens=list(stack.pop())+tokens
             else:stack.pop()
         if current=="(": #~opposite of toins (useful for looping, see repl)
-            #equivalent to {\{}+{\}}~+
-            stack.append("{"+str(stack.pop())+"}")
+            #equivalent to {\{}+{\}}~+ if no \ or &
+            stack.append(("{"+str(stack.pop())+"}").replace("\\","\\\\").replace("&","\\&"))
         if current=="[": #duplicate
             stack.append(stack[-1])
         if current=="_": #empty stack
